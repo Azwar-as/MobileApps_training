@@ -1,7 +1,9 @@
+import 'package:example_stack/pages/mainPage.dart';
+import 'package:example_stack/pages/menu.dart';
 import 'package:flutter/material.dart';
 
-class LayoutPages extends StatelessWidget {
-  const LayoutPages({super.key});
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -83,14 +85,15 @@ class LayoutPages extends StatelessWidget {
                 height: 350,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
-                  itemCount: 2,
+                  itemCount: Menu.dummy.length,
                   itemBuilder: (context, index) {
+                    Menu menu = Menu.dummy[index];
                     return Padding(
                       padding: const EdgeInsets.only(right: 50),
                       child: SizedBox(
                         width: 220,
                         child: Card(
-                          color: Colors.teal,
+                          color: menu.color,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
@@ -113,7 +116,7 @@ class LayoutPages extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Nasi Goreng Spesial Khas Malang',
+                                      menu.nameVar,
                                       style: TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
@@ -175,7 +178,7 @@ class LayoutPages extends StatelessWidget {
                     );
                   },
                 ),
-              )
+              ),
             ],
           ),
         ),
