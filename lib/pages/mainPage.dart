@@ -1,5 +1,6 @@
-import 'package:example_stack/pages/HomePage.dart';
+import 'package:example_stack/pages/homePage.dart';
 import 'package:example_stack/pages/notifPage.dart';
+import 'package:example_stack/pages/profile.dart';
 import 'package:example_stack/pages/searchPage.dart';
 import 'package:flutter/material.dart';
 
@@ -17,6 +18,7 @@ class _MainpageState extends State<Mainpage> {
     HomePage(),
     Searchpage(),
     Notifpage(),
+    ProfilePages(),
   ];
 
   void _onItemTapped(int index) {
@@ -47,6 +49,10 @@ class _MainpageState extends State<Mainpage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.notifications_outlined),
             label: 'Notif',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: 'Profile',
           )
         ],
       ),

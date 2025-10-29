@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "933613001725",
+    "project_id": "my-foodiesapps",
+    "storage_bucket": "my-foodiesapps.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:933613001725:android:2fb01e06fe3386bab19794",
+        "android_client_info": {
+          "package_name": "com.example.tugas_satu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtL384cpi91jqsTUhMdGZmYh5MMBaBo2U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

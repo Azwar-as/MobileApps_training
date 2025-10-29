@@ -1,6 +1,6 @@
-import 'package:example_stack/pages/homePage.dart';
 import 'package:example_stack/pages/mainPage.dart';
 import 'package:example_stack/pages/signupPage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class Loginpage extends StatefulWidget {
@@ -11,6 +11,93 @@ class Loginpage extends StatefulWidget {
 }
 
 class _LoginpageState extends State<Loginpage> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  String messages = "";
+  bool _isLoading = false;
+
+  String _mapAuthError(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'user-not-found':
+        return 'Email belum terdaftar.';
+      case 'wrong-password':
+        return 'Password salah.';
+      case 'invalid-email':
+        return 'Format email tidak valid.';
+      case 'user-disabled':
+        return 'Akun dinonaktifkan.';
+      case 'too-many-requests':
+        return 'Terlalu banyak percobaan. Coba lagi nanti.';
+      default:
+        return e.message ?? 'Terjadi kesalahan.';
+    }
+  }
+
+  void _signIn() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      setState(() {
+        messages = 'Email & password wajib diisi.';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Isi email dan password dulu ya.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      messages = '';
+    });
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      setState(() {
+        messages = 'Login Success!';
+      });
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const Mainpage()),
+      );
+    } on FirebaseAuthException catch (e) {
+      final msg = _mapAuthError(e);
+      setState(() {
+        messages = msg;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    } catch (_) {
+      setState(() {
+        messages = 'Gagal login. Coba lagi.';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal login.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   bool _isObscure = true;
   @override
   Widget build(BuildContext context) {
@@ -20,8 +107,7 @@ class _LoginpageState extends State<Loginpage> {
         children: [
           SizedBox(
             child: ClipRRect(
-              borderRadius:
-                  BorderRadiusGeometry.vertical(bottom: Radius.circular(30)),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
               child: Image.asset('assets/images/square.png'),
             ),
           ),
@@ -80,18 +166,23 @@ class _LoginpageState extends State<Loginpage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Username',
+                                  'Email',
                                   textAlign: TextAlign.start,
                                 ),
                                 const SizedBox(
                                   height: 5,
                                 ),
                                 TextField(
+                                  controller: _emailController,
+                                  keyboardType: TextInputType.emailAddress,
+                                  textInputAction: TextInputAction.next,
+                                  autofillHints: const [AutofillHints.email],
                                   decoration: InputDecoration(
-                                      border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(15)),
-                                      labelText: 'Username'),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    labelText: 'Email Input',
+                                  ),
                                 ),
                                 const SizedBox(
                                   height: 15,
@@ -104,7 +195,13 @@ class _LoginpageState extends State<Loginpage> {
                                   height: 5,
                                 ),
                                 TextField(
+                                  controller: _passwordController,
                                   obscureText: _isObscure,
+                                  textInputAction: TextInputAction.done,
+                                  onSubmitted: (_) {
+                                    if (!_isLoading) _signIn();
+                                  },
+                                  autofillHints: const [AutofillHints.password],
                                   decoration: InputDecoration(
                                     border: OutlineInputBorder(
                                         borderRadius:
@@ -133,15 +230,8 @@ class _LoginpageState extends State<Loginpage> {
                                       child: SizedBox(
                                         width: double.infinity,
                                         child: ElevatedButton(
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    const Mainpage(),
-                                              ),
-                                            );
-                                          },
+                                          onPressed:
+                                              _isLoading ? null : _signIn,
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: Colors.orange,
                                             padding: EdgeInsets.symmetric(
@@ -152,19 +242,42 @@ class _LoginpageState extends State<Loginpage> {
                                                   BorderRadius.circular(15),
                                             ),
                                           ),
-                                          child: const Text(
-                                            'Login',
-                                            style: TextStyle(
-                                                color: Colors.white,
-                                                fontWeight: FontWeight.w600),
-                                          ),
+                                          child: _isLoading
+                                              ? const SizedBox(
+                                                  height: 20,
+                                                  width: 20,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                          color: Colors.white),
+                                                )
+                                              : const Text(
+                                                  'Login',
+                                                  style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontWeight:
+                                                          FontWeight.w600),
+                                                ),
                                         ),
                                       ),
                                     ),
+                                    if (messages.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 8),
+                                        child: Text(
+                                          messages,
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: messages
+                                                    .toLowerCase()
+                                                    .contains('success')
+                                                ? Colors.green
+                                                : Colors.red,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
                                   ],
-                                ),
-                                const SizedBox(
-                                  height: 13,
                                 ),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,

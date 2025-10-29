@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:example_stack/pages/loginPage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class SignupPage extends StatefulWidget {
@@ -9,17 +11,154 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  String messages = "";
+  bool _isLoading = false;
+
+  String _mapFirestoreError(FirebaseException e) {
+    switch (e.code) {
+      case 'permission-denied':
+        return 'Firestore: Missing or insufficient permissions.';
+      case 'unauthenticated':
+        return 'Firestore: Session tidak valid (unauthenticated).';
+      case 'unavailable':
+        return 'Firestore: Service unavailable. Cek koneksi internet.';
+      case 'cancelled':
+        return 'Firestore: Operation dibatalkan.';
+      default:
+        return e.message ?? 'Firestore error: ${e.code}';
+    }
+  }
+
+  String _mapAuthError(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'email-already-in-use':
+        return 'Email sudah terdaftar.';
+      case 'invalid-email':
+        return 'Format email tidak valid.';
+      case 'weak-password':
+        return 'Password terlalu lemah.';
+      case 'operation-not-allowed':
+        return 'Metode auth tidak diizinkan.';
+      default:
+        return e.message ?? 'Gagal Sign Up.';
+    }
+  }
+
+  Future<void> _saveUserProfile({
+    required String uid,
+    required String username,
+    required String email,
+  }) async {
+    debugPrint(
+        '[SIGNUP] Saving profile to Firestore for uid=$uid username=$username email=$email');
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'username': username,
+        'email': email,
+        'createdAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      debugPrint('[SIGNUP] Firestore write OK for uid=$uid');
+    } on FirebaseException catch (e) {
+      debugPrint(
+          '[SIGNUP] Firestore write FAILED: code=${e.code} message=${e.message}');
+      rethrow;
+    }
+  }
+
+  void _signup() async {
+    final username = _usernameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    if (username.isEmpty || email.isEmpty || password.isEmpty) {
+      setState(() {
+        messages = 'All fields are required.';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all fields.')),
+      );
+      return;
+    }
+    setState(() {
+      _isLoading = true;
+      messages = '';
+    });
+    try {
+      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final user = cred.user;
+      if (user == null) {
+        throw FirebaseAuthException(
+            code: 'unknown', message: 'User null after sign up.');
+      }
+      await user.updateDisplayName(username);
+      await user.reload();
+      final uid = user.uid;
+      await _saveUserProfile(uid: uid, username: username, email: email);
+      setState(() {
+        messages = "Sign Up Success!";
+      });
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const Loginpage()),
+      );
+    } on FirebaseAuthException catch (e) {
+      final msg = _mapAuthError(e);
+      setState(() {
+        messages = msg;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    } on FirebaseException catch (e) {
+      final msg = _mapFirestoreError(e);
+      setState(() {
+        messages = msg;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
+    } catch (e) {
+      setState(() {
+        messages = 'Failed Sign Up';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed Sign Up')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   bool _isObscure = true;
   @override
+  void dispose() {
+    _usernameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final bool isPasswordShort = _passwordController.text.length < 8 &&
+        _passwordController.text.isNotEmpty;
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 253, 249, 245),
       body: Stack(
         children: [
           SizedBox(
             child: ClipRRect(
-              borderRadius:
-                  BorderRadiusGeometry.vertical(bottom: Radius.circular(80)),
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(80)),
               child: Image.asset('assets/images/square.png'),
             ),
           ),
@@ -33,10 +172,11 @@ class _SignupPageState extends State<SignupPage> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                            color: Colors.grey,
-                            spreadRadius: 2,
-                            blurRadius: 10,
-                            offset: const Offset(0, 5)),
+                          color: Colors.grey,
+                          spreadRadius: 2,
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
                       ],
                     ),
                     child: Padding(
@@ -84,10 +224,11 @@ class _SignupPageState extends State<SignupPage> {
                                   height: 5,
                                 ),
                                 TextField(
+                                  controller: _usernameController,
                                   decoration: InputDecoration(
                                       border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(15)),
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
                                       labelText: 'Username'),
                                 ),
                                 const SizedBox(
@@ -101,10 +242,11 @@ class _SignupPageState extends State<SignupPage> {
                                   height: 5,
                                 ),
                                 TextField(
+                                  controller: _emailController,
                                   decoration: InputDecoration(
                                       border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(15)),
+                                        borderRadius: BorderRadius.circular(15),
+                                      ),
                                       labelText: 'Email Input'),
                                 ),
                                 const SizedBox(
@@ -118,12 +260,27 @@ class _SignupPageState extends State<SignupPage> {
                                   height: 5,
                                 ),
                                 TextField(
+                                  controller: _passwordController,
                                   obscureText: _isObscure,
+                                  onChanged: (value) => setState(() {}),
                                   decoration: InputDecoration(
                                     border: OutlineInputBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(15)),
+                                      borderRadius: BorderRadius.circular(15),
+                                      borderSide:
+                                          BorderSide(color: Colors.black),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: isPasswordShort
+                                            ? Colors.red
+                                            : Colors.black,
+                                      ),
+                                    ),
                                     labelText: 'Password',
+                                    labelStyle: TextStyle(
+                                        color: isPasswordShort
+                                            ? Colors.red
+                                            : Colors.black),
                                     suffixIcon: IconButton(
                                       onPressed: () {
                                         setState(() {
@@ -138,6 +295,11 @@ class _SignupPageState extends State<SignupPage> {
                                     ),
                                   ),
                                 ),
+                                if (isPasswordShort)
+                                  Text(
+                                    'Password must be at least 8 characters long',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
                                 const SizedBox(
                                   height: 30,
                                 ),
@@ -147,15 +309,8 @@ class _SignupPageState extends State<SignupPage> {
                                       child: SizedBox(
                                         width: double.infinity,
                                         child: ElevatedButton(
-                                          onPressed: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    const Loginpage(),
-                                              ),
-                                            );
-                                          },
+                                          onPressed:
+                                              _isLoading ? null : _signup,
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: Colors.orange,
                                             padding: const EdgeInsets.symmetric(
@@ -166,21 +321,43 @@ class _SignupPageState extends State<SignupPage> {
                                                   BorderRadius.circular(15),
                                             ),
                                           ),
-                                          child: const Text(
-                                            'Sign Up',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
+                                          child: _isLoading
+                                              ? const SizedBox(
+                                                  height: 20,
+                                                  width: 20,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                          color: Colors.white),
+                                                )
+                                              : const Text(
+                                                  'Sign Up',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
                                         ),
                                       ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(
-                                  height: 15,
-                                ),
+                                if (messages.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 8),
+                                    child: Text(
+                                      messages,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: messages
+                                                .toLowerCase()
+                                                .contains('success')
+                                            ? Colors.green
+                                            : Colors.red,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [

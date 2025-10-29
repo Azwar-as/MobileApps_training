@@ -1,10 +1,16 @@
-import 'package:example_stack/pages/homePage.dart';
+import 'package:example_stack/firebase_options.dart';
 import 'package:example_stack/pages/loginPage.dart';
-import 'package:example_stack/pages/mainPage.dart';
-import 'package:example_stack/pages/signupPage.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+// import 'firebase_options.dart';
 
-void main() => runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

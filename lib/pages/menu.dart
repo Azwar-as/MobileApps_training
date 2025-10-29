@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 
 class Menu {
   final String nameVar;
@@ -13,15 +12,30 @@ class Menu {
   static List get dummy {
     return [
       Menu(
-        'Nasi Goreng Khas Malang',
+        'Nasi Goreng Spesial',
         'assets/images/nasi-goreng.png',
         Colors.teal,
       ),
       Menu(
-        'Nasi Goreng Khas Semarang',
-        'assets/images/nasi-goreng.png',
+        'Ayam Suwir',
+        'assets/images/ayamsuwir.png',
         Colors.orangeAccent,
-      )
+      ),
+      Menu(
+        'Soto Ayam',
+        'assets/images/sotoAyam.png',
+        Colors.teal,
+      ),
+      Menu(
+        'Rendang',
+        'assets/images/rendang.png',
+        Colors.orangeAccent,
+      ),
+      Menu(
+        'Rendang',
+        'assets/images/sayurSop.png',
+        Colors.teal,
+      ),
     ];
   }
 }
